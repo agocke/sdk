@@ -86,6 +86,12 @@ namespace Microsoft.CodeAnalysis.Tools
             Arity = ArgumentArity.ZeroOrOne,
             Description = Resources.Accepts_a_file_path_which_if_provided_will_produce_a_json_report_in_the_given_directory,
         };
+        internal static readonly Option<string> FromBinlogOption = new Option<string>("--from-binlog")
+        {
+            HelpName = "binlog-path",
+            Arity = ArgumentArity.ExactlyOne,
+            Description = Resources.Load_project_information_from_a_binary_log_file_instead_of_a_project_or_solution,
+        };
 
         static FormatCommandCommon()
         {
@@ -93,6 +99,7 @@ namespace Microsoft.CodeAnalysis.Tools
             VerbosityOption.AcceptOnlyFromAmong(VerbosityLevels);
             BinarylogOption.AcceptLegalFilePathsOnly();
             ReportOption.AcceptLegalFilePathsOnly();
+            FromBinlogOption.AcceptLegalFilePathsOnly();
         }
 
         internal static async Task<int> FormatAsync(FormatOptions formatOptions, ILogger<Program> logger, CancellationToken cancellationToken)
@@ -122,6 +129,7 @@ namespace Microsoft.CodeAnalysis.Tools
             command.Options.Add(VerbosityOption);
             command.Options.Add(BinarylogOption);
             command.Options.Add(ReportOption);
+            command.Options.Add(FromBinlogOption);
         }
 
         public static Argument<string> DefaultToCurrentDirectory(this Argument<string> arg)
@@ -300,6 +308,16 @@ namespace Microsoft.CodeAnalysis.Tools
         {
             var currentDirectory = Environment.CurrentDirectory;
 
+            // Check for --from-binlog option first
+            if (parseResult.GetResult(FromBinlogOption) is not null &&
+                parseResult.GetValue(FromBinlogOption) is string { Length: > 0 } binlogInputPath)
+            {
+                formatOptions = formatOptions with { BinlogInputPath = binlogInputPath };
+                formatOptions = formatOptions with { WorkspaceFilePath = binlogInputPath };
+                formatOptions = formatOptions with { WorkspaceType = WorkspaceType.Binlog };
+                return formatOptions;
+            }
+
             if (parseResult.GetValue<string>(SlnOrProjectArgument) is string { Length: > 0 } slnOrProject)
             {
                 if (parseResult.GetValue(FolderOption))
@@ -324,6 +342,47 @@ namespace Microsoft.CodeAnalysis.Tools
             }
 
             return formatOptions;
+        }
+
+        public static string? ValidateBinlogOptions(this ParseResult parseResult, ILogger logger)
+        {
+            if (parseResult.GetResult(FromBinlogOption) is null)
+            {
+                return null;
+            }
+
+            var binlogPath = parseResult.GetValue(FromBinlogOption);
+
+            // Check that the binlog file exists
+            if (!string.IsNullOrEmpty(binlogPath) && !File.Exists(binlogPath))
+            {
+                return string.Format(Resources.The_binlog_file_0_does_not_exist, binlogPath);
+            }
+
+            // Check for incompatible options
+            var slnOrProject = parseResult.GetValue(SlnOrProjectArgument);
+            var currentDirectory = EnsureTrailingSlash(Directory.GetCurrentDirectory());
+            if (!string.IsNullOrEmpty(slnOrProject) && slnOrProject != currentDirectory)
+            {
+                return Resources.Cannot_specify_the_from_binlog_option_with_a_workspace_argument;
+            }
+
+            if (parseResult.GetValue(FolderOption))
+            {
+                return Resources.Cannot_specify_the_from_binlog_option_with_folder;
+            }
+
+            if (parseResult.GetValue(NoRestoreOption))
+            {
+                return Resources.Cannot_specify_the_from_binlog_option_with_no_restore;
+            }
+
+            if (parseResult.GetResult(BinarylogOption) is not null)
+            {
+                return Resources.Cannot_specify_the_from_binlog_option_with_binarylog;
+            }
+
+            return null;
         }
 
         private static string EnsureTrailingSlash(string path)

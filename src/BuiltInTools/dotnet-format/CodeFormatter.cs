@@ -30,15 +30,25 @@ namespace Microsoft.CodeAnalysis.Tools
         {
             var logWorkspaceWarnings = formatOptions.LogLevel == LogLevel.Trace;
 
-            logger.LogInformation(string.Format(Resources.Formatting_code_files_in_workspace_0, formatOptions.WorkspaceFilePath));
+            if (formatOptions.WorkspaceType == WorkspaceType.Binlog)
+            {
+                logger.LogInformation(string.Format(Resources.Formatting_code_files_from_binlog_0, formatOptions.BinlogInputPath));
+            }
+            else
+            {
+                logger.LogInformation(string.Format(Resources.Formatting_code_files_in_workspace_0, formatOptions.WorkspaceFilePath));
+            }
 
             logger.LogTrace(Resources.Loading_workspace);
 
             var workspaceStopwatch = Stopwatch.StartNew();
 
-            using var workspace = formatOptions.WorkspaceType == WorkspaceType.Folder
-                ? OpenFolderWorkspace(formatOptions.WorkspaceFilePath, formatOptions.FileMatcher)
-                : await OpenMSBuildWorkspaceAsync(formatOptions.WorkspaceFilePath, formatOptions.WorkspaceType, formatOptions.NoRestore, formatOptions.FixCategory != FixCategory.Whitespace, binaryLogPath, logWorkspaceWarnings, logger, cancellationToken).ConfigureAwait(false);
+            using var workspace = formatOptions.WorkspaceType switch
+            {
+                WorkspaceType.Folder => OpenFolderWorkspace(formatOptions.WorkspaceFilePath, formatOptions.FileMatcher),
+                WorkspaceType.Binlog => await OpenBinlogWorkspaceAsync(formatOptions.BinlogInputPath!, logger, cancellationToken).ConfigureAwait(false),
+                _ => await OpenMSBuildWorkspaceAsync(formatOptions.WorkspaceFilePath, formatOptions.WorkspaceType, formatOptions.NoRestore, formatOptions.FixCategory != FixCategory.Whitespace, binaryLogPath, logWorkspaceWarnings, logger, cancellationToken).ConfigureAwait(false)
+            };
 
             if (workspace is null)
             {
@@ -136,6 +146,14 @@ namespace Microsoft.CodeAnalysis.Tools
             }
 
             return await MSBuildWorkspaceLoader.LoadAsync(solutionOrProjectPath, workspaceType, binaryLogPath, logWorkspaceWarnings, logger, cancellationToken);
+        }
+
+        private static async Task<Workspace?> OpenBinlogWorkspaceAsync(
+            string binlogPath,
+            ILogger logger,
+            CancellationToken cancellationToken)
+        {
+            return await BinlogWorkspaceLoader.LoadAsync(binlogPath, logger, cancellationToken);
         }
 
         private static async Task<Solution> RunCodeFormattersAsync(

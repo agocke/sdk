@@ -360,4 +360,34 @@
   <data name="A_space_separated_list_of_diagnostic_ids_to_ignore_when_fixing_code_style_or_3rd_party_issues" xml:space="preserve">
     <value>A space separated list of diagnostic ids to ignore when fixing code style or 3rd party issues.</value>
   </data>
+  <data name="Load_project_information_from_a_binary_log_file_instead_of_a_project_or_solution" xml:space="preserve">
+    <value>Load project information from a binary log file instead of a project or solution.</value>
+  </data>
+  <data name="The_binlog_file_0_does_not_exist" xml:space="preserve">
+    <value>The binary log file '{0}' does not exist.</value>
+  </data>
+  <data name="No_compiler_invocations_found_in_binlog" xml:space="preserve">
+    <value>No C# or Visual Basic compiler invocations found in the binary log.</value>
+  </data>
+  <data name="Cannot_specify_the_from_binlog_option_with_a_workspace_argument" xml:space="preserve">
+    <value>Cannot specify the '--from-binlog' option with a project or solution argument.</value>
+  </data>
+  <data name="Cannot_specify_the_from_binlog_option_with_folder" xml:space="preserve">
+    <value>Cannot specify the '--from-binlog' option with '--folder'.</value>
+  </data>
+  <data name="Cannot_specify_the_from_binlog_option_with_no_restore" xml:space="preserve">
+    <value>Cannot specify the '--from-binlog' option with '--no-restore'.</value>
+  </data>
+  <data name="Cannot_specify_the_from_binlog_option_with_binarylog" xml:space="preserve">
+    <value>Cannot specify the '--from-binlog' option with '--binarylog'.</value>
+  </data>
+  <data name="Loading_projects_from_binlog" xml:space="preserve">
+    <value>Loading projects from binary log.</value>
+  </data>
+  <data name="Found_0_compiler_invocations_in_binlog" xml:space="preserve">
+    <value>Found {0} compiler invocation(s) in binary log.</value>
+  </data>
+  <data name="Formatting_code_files_from_binlog_0" xml:space="preserve">
+    <value>Formatting code files using binary log '{0}'.</value>
+  </data>
 </root>

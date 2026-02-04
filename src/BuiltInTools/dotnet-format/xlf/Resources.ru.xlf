@@ -72,6 +72,26 @@
         <target state="translated">Невозможно указать параметр "--folder" при записи двоичного журнала.</target>
         <note />
       </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_a_workspace_argument">
+        <source>Cannot specify the '--from-binlog' option with a project or solution argument.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with a project or solution argument.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_binarylog">
+        <source>Cannot specify the '--from-binlog' option with '--binarylog'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--binarylog'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_folder">
+        <source>Cannot specify the '--from-binlog' option with '--folder'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--folder'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_no_restore">
+        <source>Cannot specify the '--from-binlog' option with '--no-restore'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--no-restore'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Code_Style">
         <source>Code Style</source>
         <target state="translated">Стиль кода</target>
@@ -182,9 +202,19 @@
         <target state="translated">Форматирование файла кода "{0}".</target>
         <note />
       </trans-unit>
+      <trans-unit id="Formatting_code_files_from_binlog_0">
+        <source>Formatting code files using binary log '{0}'.</source>
+        <target state="new">Formatting code files using binary log '{0}'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Formatting_code_files_in_workspace_0">
         <source>Formatting code files in workspace '{0}'.</source>
         <target state="translated">Форматирование кода файлов в рабочей области "{0}".</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Found_0_compiler_invocations_in_binlog">
+        <source>Found {0} compiler invocation(s) in binary log.</source>
+        <target state="new">Found {0} compiler invocation(s) in binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Include_generated_code_files_in_formatting_operations">
@@ -195,6 +225,16 @@
       <trans-unit id="Insert_0">
         <source>Insert '{0}'.</source>
         <target state="translated">Вставка "{0}"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Load_project_information_from_a_binary_log_file_instead_of_a_project_or_solution">
+        <source>Load project information from a binary log file instead of a project or solution.</source>
+        <target state="new">Load project information from a binary log file instead of a project or solution.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Loading_projects_from_binlog">
+        <source>Loading projects from binary log.</source>
+        <target state="new">Loading projects from binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Loading_workspace">
@@ -215,6 +255,11 @@
       <trans-unit id="Multiple_MSBuild_solution_files_found_in_0_Specify_which_to_use_with_the_workspace_argument">
         <source>Multiple MSBuild solution files found in '{0}'. Specify which to use with the &lt;workspace&gt; argument.</source>
         <target state="translated">В "{0}" обнаружено несколько файлов решения MSBuild. Укажите используемый файл с помощью аргумента &lt;workspace&gt;.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="No_compiler_invocations_found_in_binlog">
+        <source>No C# or Visual Basic compiler invocations found in the binary log.</source>
+        <target state="new">No C# or Visual Basic compiler invocations found in the binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Project_0_is_using_configuration_from_1">
@@ -305,6 +350,11 @@
       <trans-unit id="Standard_input_used_multiple_times">
         <source>Standard input markers ('/dev/stdin', '-') can only be used either with `--include` or `--exclude`, but not both.</source>
         <target state="translated">Стандартные входные маркеры ("/dev/stdin", "-") можно использовать только с "--include" или "--exclude", но не с обоими параметрами одновременно.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="The_binlog_file_0_does_not_exist">
+        <source>The binary log file '{0}' does not exist.</source>
+        <target state="new">The binary log file '{0}' does not exist.</target>
         <note />
       </trans-unit>
       <trans-unit id="The_diagnostics_option_only_applies_when_fixing_style_or_running_analyzers">

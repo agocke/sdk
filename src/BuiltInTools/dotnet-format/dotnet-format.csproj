@@ -38,6 +38,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
 
     <PackageReference Include="System.CommandLine" />
+
+    <PackageReference Include="MSBuild.StructuredLogger" />
   </ItemGroup>
 
   <ItemGroup>

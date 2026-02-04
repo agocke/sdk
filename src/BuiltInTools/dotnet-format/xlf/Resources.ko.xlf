@@ -72,6 +72,26 @@
         <target state="translated">이진 로그를 작성할 때는 '--folder' 옵션을 지정할 수 없습니다.</target>
         <note />
       </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_a_workspace_argument">
+        <source>Cannot specify the '--from-binlog' option with a project or solution argument.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with a project or solution argument.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_binarylog">
+        <source>Cannot specify the '--from-binlog' option with '--binarylog'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--binarylog'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_folder">
+        <source>Cannot specify the '--from-binlog' option with '--folder'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--folder'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Cannot_specify_the_from_binlog_option_with_no_restore">
+        <source>Cannot specify the '--from-binlog' option with '--no-restore'.</source>
+        <target state="new">Cannot specify the '--from-binlog' option with '--no-restore'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Code_Style">
         <source>Code Style</source>
         <target state="translated">코드 스타일</target>
@@ -182,9 +202,19 @@
         <target state="translated">코드 파일 '{0}'의 서식을 지정합니다.</target>
         <note />
       </trans-unit>
+      <trans-unit id="Formatting_code_files_from_binlog_0">
+        <source>Formatting code files using binary log '{0}'.</source>
+        <target state="new">Formatting code files using binary log '{0}'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Formatting_code_files_in_workspace_0">
         <source>Formatting code files in workspace '{0}'.</source>
         <target state="translated">'{0}' 작업 영역에서 코드 파일의 서식을 지정합니다.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Found_0_compiler_invocations_in_binlog">
+        <source>Found {0} compiler invocation(s) in binary log.</source>
+        <target state="new">Found {0} compiler invocation(s) in binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Include_generated_code_files_in_formatting_operations">
@@ -195,6 +225,16 @@
       <trans-unit id="Insert_0">
         <source>Insert '{0}'.</source>
         <target state="translated">'{0}'을(를) 삽입합니다.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Load_project_information_from_a_binary_log_file_instead_of_a_project_or_solution">
+        <source>Load project information from a binary log file instead of a project or solution.</source>
+        <target state="new">Load project information from a binary log file instead of a project or solution.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Loading_projects_from_binlog">
+        <source>Loading projects from binary log.</source>
+        <target state="new">Loading projects from binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Loading_workspace">
@@ -215,6 +255,11 @@
       <trans-unit id="Multiple_MSBuild_solution_files_found_in_0_Specify_which_to_use_with_the_workspace_argument">
         <source>Multiple MSBuild solution files found in '{0}'. Specify which to use with the &lt;workspace&gt; argument.</source>
         <target state="translated">'{0}'에 여러 MSBuild 솔루션 파일이 있습니다. &lt;workspace&gt; 인수를 사용하여 사용할 파일을 지정하세요.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="No_compiler_invocations_found_in_binlog">
+        <source>No C# or Visual Basic compiler invocations found in the binary log.</source>
+        <target state="new">No C# or Visual Basic compiler invocations found in the binary log.</target>
         <note />
       </trans-unit>
       <trans-unit id="Project_0_is_using_configuration_from_1">
@@ -305,6 +350,11 @@
       <trans-unit id="Standard_input_used_multiple_times">
         <source>Standard input markers ('/dev/stdin', '-') can only be used either with `--include` or `--exclude`, but not both.</source>
         <target state="translated">표준 입력 표식('/dev/stdin', '-')은(는) '--include' 또는 '--exclude' 중 하나와만 사용할 수 있으며 둘 다와 사용할 수는 없습니다.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="The_binlog_file_0_does_not_exist">
+        <source>The binary log file '{0}' does not exist.</source>
+        <target state="new">The binary log file '{0}' does not exist.</target>
         <note />
       </trans-unit>
       <trans-unit id="The_diagnostics_option_only_applies_when_fixing_style_or_running_analyzers">

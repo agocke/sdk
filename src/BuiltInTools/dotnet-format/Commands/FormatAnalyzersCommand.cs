@@ -32,6 +32,14 @@ namespace Microsoft.CodeAnalysis.Tools.Commands
             {
                 var formatOptions = parseResult.ParseVerbosityOption(FormatOptions.Instance);
                 var logger = SetupLogging(minimalLogLevel: formatOptions.LogLevel, minimalErrorLevel: LogLevel.Warning);
+
+                var binlogError = parseResult.ValidateBinlogOptions(logger);
+                if (binlogError is not null)
+                {
+                    logger.LogError(binlogError);
+                    return UnhandledExceptionExitCode;
+                }
+
                 formatOptions = parseResult.ParseCommonOptions(formatOptions, logger);
                 formatOptions = parseResult.ParseWorkspaceOptions(formatOptions);
 
