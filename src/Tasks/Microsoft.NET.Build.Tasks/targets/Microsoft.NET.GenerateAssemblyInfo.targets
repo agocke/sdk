@@ -214,8 +214,8 @@ Copyright (c) .NET Foundation. All rights reserved.
         <Version>1.2.3-beta.4</Version>
 
     implies:
-        <AssemblyVersion>1.2.3</AssemblyVersion>
-        <FileVersion>1.2.3</FileVersion>
+        <AssemblyVersion>1.2.3.0</AssemblyVersion>
+        <FileVersion>1.2.3.0</FileVersion>
 
     Note that if $(AssemblyVersion) or $(FileVersion) are are already set, it
     is considered an override of the default inference from $(Version) and they
