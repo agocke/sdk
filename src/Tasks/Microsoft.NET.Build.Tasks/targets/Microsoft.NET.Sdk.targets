@@ -343,7 +343,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ItemGroup>
       <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
            during incremental builds when the task is skipped -->
-      <FileWrites Include="$(ProjectDepsFilePath)" Condition="Exists('$(ProjectDepsFilePath)')"/>
+      <FileWrites Include="$(ProjectDepsFilePath)" Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectDepsFilePath)')"/>
     </ItemGroup>
   </Target>
 
@@ -433,8 +433,9 @@ Copyright (c) .NET Foundation. All rights reserved.
     <ItemGroup>
       <!-- Do this in an ItemGroup instead of as an output parameter of the GenerateDepsFile task so that it still gets added to the item set
           during incremental builds when the task is skipped -->
-      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="Exists('$(ProjectRuntimeConfigFilePath)')"/>
-      <FileWrites Include="$(ProjectRuntimeConfigDevFilePath)" Condition="Exists('$(ProjectRuntimeConfigDevFilePath)')"/>
+      <FileWrites Include="$(ProjectRuntimeConfigFilePath)" Condition="'$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigFilePath)')"/>
+      <FileWrites Include="$(ProjectRuntimeConfigDevFilePath)"
+                  Condition="'$(ProjectRuntimeConfigDevFilePath)' != '' And ('$(MSBuildHardenedGraph)' == 'true' Or Exists('$(ProjectRuntimeConfigDevFilePath)'))"/>
     </ItemGroup>
 
   </Target>
