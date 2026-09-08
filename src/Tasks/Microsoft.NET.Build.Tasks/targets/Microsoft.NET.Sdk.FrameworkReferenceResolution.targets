@@ -90,7 +90,7 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <Target Name="ProcessFrameworkReferences" BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CollectPackageReferences;CollectPackageDownloads"
           DependsOnTargets="_ComputeTargetLatestRuntimePatch;AddWindowsSdkKnownFrameworkReferences"
-          Condition="'@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true'">
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And ('@(FrameworkReference)' != '' Or '$(_RequiresILLinkPack)' == 'true')">
 
     <CheckForDuplicateFrameworkReferences
         FrameworkReferences="@(FrameworkReference)"
@@ -276,7 +276,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveFrameworkReferences" DependsOnTargets="ProcessFrameworkReferences;ResolvePackageAssets"
-          Condition="'@(FrameworkReference)' != ''"
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''"
           Returns="@(ResolvedFrameworkReference)">
 
     <GetPackageDirectory
@@ -430,7 +430,7 @@ Copyright (c) .NET Foundation. All rights reserved.
     ============================================================
     -->
   <Target Name="ResolveTargetingPackAssets" DependsOnTargets="ResolveFrameworkReferences"
-          Condition="'@(FrameworkReference)' != ''">
+          Condition="'$(_UsingFrameworkReferenceManifest)' != 'true' And '@(FrameworkReference)' != ''">
 
     <!-- For design-time builds, don't generate an error if a targeting pack isn't available (ie because it hasn't been restored yet) -->
     <PropertyGroup Condition="'$(GenerateErrorForMissingTargetingPacks)' == ''">

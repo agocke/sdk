@@ -978,6 +978,194 @@ namespace FrameworkReferenceTest
                 .NotHaveStdOutContaining("Microsoft.AspNetCore.App");
         }
 
+        [TestMethod]
+        public void FrameworkReferenceManifestCanSupplyCompileReferencesAndAppHostWithoutRestore()
+        {
+            var baselineProject = CreateFrameworkManifestTestProject();
+            var baselineAsset = TestAssetsManager.CreateTestProject(baselineProject, identifier: "baseline");
+            var baselineBuild = new BuildCommand(baselineAsset);
+
+            baselineBuild.Execute().Should().Pass();
+
+            string baselineProjectFolder = Path.Combine(baselineAsset.TestRoot, baselineProject.Name);
+            var baselineReferencesCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "ReferencePath",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveReferences",
+                MetadataNames = { "ReferenceAssembly" },
+            };
+
+            baselineReferencesCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> baselineReferences =
+                baselineReferencesCommand.GetValuesWithMetadata();
+
+            var runtimeFrameworkCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "RuntimeFramework",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "FrameworkName", "Version", "Profile" },
+            };
+
+            runtimeFrameworkCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> runtimeFrameworks =
+                runtimeFrameworkCommand.GetValuesWithMetadata();
+
+            var resolvedFrameworkReferenceCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "ResolvedFrameworkReference",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "IsImplicitlyDefined", "TargetingPackName", "TargetingPackVersion", "TargetingPackPath", "OriginalItemSpec", "Profile" },
+            };
+
+            resolvedFrameworkReferenceCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> resolvedFrameworkReferences =
+                resolvedFrameworkReferenceCommand.GetValuesWithMetadata();
+
+            var appHostSourcePathCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "AppHostSourcePath")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            appHostSourcePathCommand.ExecuteWithoutRestore().Should().Pass();
+            string appHostSourcePath = appHostSourcePathCommand.GetValues().Single();
+
+            var appHostRuntimeIdentifierCommand = new GetValuesCommand(
+                Log,
+                baselineProjectFolder,
+                baselineProject.TargetFrameworks,
+                "AppHostRuntimeIdentifier")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            appHostRuntimeIdentifierCommand.ExecuteWithoutRestore().Should().Pass();
+            string appHostRuntimeIdentifier = appHostRuntimeIdentifierCommand.GetValues().Single();
+
+            var manifestProject = CreateFrameworkManifestTestProject();
+            manifestProject.AdditionalProperties["BeforeMicrosoftNETSdkTargets"] =
+                @"$(MSBuildProjectDirectory)\framework-reference-manifest.props";
+            manifestProject.AdditionalProperties["ProjectAssetsFile"] =
+                @"$(MSBuildProjectDirectory)\missing.project.assets.json";
+
+            var manifestAsset = TestAssetsManager.CreateTestProject(manifestProject, identifier: "manifest");
+            string manifestProjectFolder = Path.Combine(manifestAsset.TestRoot, manifestProject.Name);
+            string manifestPath = Path.Combine(manifestProjectFolder, "framework-reference-manifest.props");
+
+            WriteFrameworkReferenceManifest(
+                manifestPath,
+                baselineReferences,
+                runtimeFrameworks,
+                resolvedFrameworkReferences,
+                appHostSourcePath,
+                appHostRuntimeIdentifier);
+
+            var manifestBuild = new BuildCommand(manifestAsset);
+            manifestBuild.ExecuteWithoutRestore().Should().Pass();
+
+            File.Exists(Path.Combine(manifestProjectFolder, "missing.project.assets.json")).Should().BeFalse();
+
+            var manifestReferencesCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "ReferencePath",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveReferences",
+                MetadataNames = { "ReferenceSourceTarget" },
+            };
+
+            manifestReferencesCommand.ExecuteWithoutRestore().Should().Pass();
+            List<(string value, Dictionary<string, string> metadata)> manifestReferences =
+                manifestReferencesCommand.GetValuesWithMetadata();
+
+            manifestReferences.Select(reference => reference.value)
+                .Should().Equal(baselineReferences.Select(reference => reference.value));
+            manifestReferences.Should().OnlyContain(
+                reference => reference.metadata["ReferenceSourceTarget"] == "FrameworkReferenceManifest");
+
+            DirectoryInfo outputDirectory = manifestBuild.GetOutputDirectory(manifestProject.TargetFrameworks);
+            outputDirectory.Should().HaveFile(manifestProject.Name + ".dll");
+            outputDirectory.Should().HaveFile(manifestProject.Name + EnvironmentInfo.ExecutableExtension);
+        }
+
+        private static TestProject CreateFrameworkManifestTestProject()
+        {
+            var project = new TestProject
+            {
+                Name = "FrameworkReferenceManifest",
+                TargetFrameworks = ToolsetInfo.CurrentTargetFramework,
+                IsExe = true,
+            };
+
+            project.AdditionalProperties["GenerateDependencyFile"] = "false";
+            project.AdditionalProperties["GenerateRuntimeConfigurationFiles"] = "false";
+            return project;
+        }
+
+        private static void WriteFrameworkReferenceManifest(
+            string manifestPath,
+            IEnumerable<(string value, Dictionary<string, string> metadata)> references,
+            IEnumerable<(string value, Dictionary<string, string> metadata)> runtimeFrameworks,
+            IEnumerable<(string value, Dictionary<string, string> metadata)> resolvedFrameworkReferences,
+            string appHostSourcePath,
+            string appHostRuntimeIdentifier)
+        {
+            XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
+            var project = new XElement(ns + "Project",
+                new XElement(ns + "PropertyGroup",
+                    new XElement(ns + "_UsingFrameworkReferenceManifest", "true"),
+                    new XElement(ns + "SkipResolvePackageAssets", "true"),
+                    new XElement(ns + "DisableCheckingDuplicateNuGetItems", "true"),
+                    new XElement(ns + "UseAppHostFromAssetsFile", "false"),
+                    new XElement(ns + "AppHostSourcePath", appHostSourcePath),
+                    new XElement(ns + "AppHostRuntimeIdentifier", appHostRuntimeIdentifier)),
+                new XElement(ns + "ItemGroup",
+                    references.Select(reference =>
+                        new XElement(ns + "ReferencePath",
+                            new XAttribute("Include", reference.value),
+                            new XElement(ns + "ReferenceAssembly", reference.metadata["ReferenceAssembly"]),
+                            new XElement(ns + "Private", "false"),
+                            new XElement(ns + "ExternallyResolved", "true"),
+                            new XElement(ns + "ReferenceSourceTarget", "FrameworkReferenceManifest"))),
+                    runtimeFrameworks.Select(runtimeFramework =>
+                        CreateManifestItem(ns, "RuntimeFramework", runtimeFramework)),
+                    resolvedFrameworkReferences.Select(frameworkReference =>
+                        CreateManifestItem(ns, "ResolvedFrameworkReference", frameworkReference))));
+
+            Directory.CreateDirectory(Path.GetDirectoryName(manifestPath));
+            new XDocument(project).Save(manifestPath);
+        }
+
+        private static XElement CreateManifestItem(
+            XNamespace ns,
+            string itemType,
+            (string value, Dictionary<string, string> metadata) item)
+        {
+            return new XElement(
+                ns + itemType,
+                new XAttribute("Include", item.value),
+                item.metadata
+                    .Where(metadata => !string.IsNullOrEmpty(metadata.Value))
+                    .Select(metadata => new XElement(ns + metadata.Key, metadata.Value)));
+        }
+
         private void TestFrameworkReferenceProfiles(
             IEnumerable<string> frameworkReferences,
             IEnumerable<string> expectedReferenceNames,

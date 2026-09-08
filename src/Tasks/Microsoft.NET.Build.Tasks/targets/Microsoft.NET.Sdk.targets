@@ -855,8 +855,8 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="_GetAppHostPaths;_GetAppHostCreationConfiguration;CoreCompile"
           Condition="'$(ComputeNETCoreBuildOutputFiles)' == 'true' and
                      '$(AppHostSourcePath)' != '' and
-                     Exists('@(IntermediateAssembly)') and
-                     Exists('$(AppHostSourcePath)')">
+                     ('$(_UsingFrameworkReferenceManifest)' == 'true' or
+                     (Exists('@(IntermediateAssembly)') and Exists('$(AppHostSourcePath)')))">
     <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
                    AppHostDestinationPath="$(AppHostIntermediatePath)"
                    AppBinaryName="$(AssemblyName)$(TargetExt)"
