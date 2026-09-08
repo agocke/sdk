@@ -22,6 +22,35 @@ Copyright (c) .NET Foundation. All rights reserved.
   <UsingTask TaskName="CheckForDuplicateFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="ProcessFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
   <UsingTask TaskName="ResolveAppHosts" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+  <UsingTask TaskName="WriteFrameworkReferenceFetchManifest" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
+
+  <Target Name="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks"
+          DependsOnTargets="ProcessFrameworkReferences">
+    <ItemGroup>
+      <_FrameworkReferenceFetchManifestRuntimeFramework Include="@(RuntimeFramework)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateFrameworkReferenceFetchManifest"
+          AfterTargets="Restore"
+          DependsOnTargets="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;ResolveTargetingPackAssets;_GetAppHostPaths"
+          Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
+                     '$(MSBuildIsRestoring)' == 'true' and
+                     '$(IsCrossTargetingBuild)' != 'true' and
+                     '@(FrameworkReference->Count())' == '1' and
+                     '@(PackageReference->Count())' == '0' and
+                     '@(ProjectReference->Count())' == '0' and
+                     '$(RuntimeIdentifier)' == ''">
+    <WriteFrameworkReferenceFetchManifest
+      OutputFile="$(FrameworkReferenceFetchManifestPath)"
+      TargetFramework="$(TargetFramework)"
+      FrameworkReferences="@(FrameworkReference)"
+      CompileReferences="@(Reference)"
+      RuntimeFrameworks="@(_FrameworkReferenceFetchManifestRuntimeFramework)"
+      ResolvedFrameworkReferences="@(ResolvedFrameworkReference)"
+      AppHostSourcePath="$(AppHostSourcePath)"
+      AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)" />
+  </Target>
 
 
   <!-- Don't add Windows SDK framework reference for C++ by default, as C++ doesn't use it and it would be an unnecessary download for possible

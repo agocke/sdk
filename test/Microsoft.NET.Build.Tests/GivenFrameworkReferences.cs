@@ -1058,28 +1058,26 @@ namespace FrameworkReferenceTest
             string appHostRuntimeIdentifier = appHostRuntimeIdentifierCommand.GetValues().Single();
 
             var manifestProject = CreateFrameworkManifestTestProject();
-            manifestProject.AdditionalProperties["BeforeMicrosoftNETSdkTargets"] =
-                @"$(MSBuildProjectDirectory)\framework-reference-manifest.props";
-            manifestProject.AdditionalProperties["ProjectAssetsFile"] =
-                @"$(MSBuildProjectDirectory)\missing.project.assets.json";
+            manifestProject.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
 
             var manifestAsset = TestAssetsManager.CreateTestProject(manifestProject, identifier: "manifest");
             string manifestProjectFolder = Path.Combine(manifestAsset.TestRoot, manifestProject.Name);
-            string manifestPath = Path.Combine(manifestProjectFolder, "framework-reference-manifest.props");
+            new RestoreCommand(manifestAsset).Execute().Should().Pass();
 
-            WriteFrameworkReferenceManifest(
-                manifestPath,
-                manifestProject.TargetFrameworks,
-                baselineReferences,
-                runtimeFrameworks,
-                resolvedFrameworkReferences,
-                appHostSourcePath,
-                appHostRuntimeIdentifier);
+            string manifestPath = Path.Combine(
+                manifestProjectFolder,
+                "obj",
+                "frameworkreferences",
+                $"{manifestProject.Name}.csproj.g.props");
+            File.Exists(manifestPath).Should().BeTrue();
+
+            string projectAssetsFile = Path.Combine(manifestProjectFolder, "obj", "project.assets.json");
+            File.Delete(projectAssetsFile);
 
             var manifestBuild = new BuildCommand(manifestAsset);
             manifestBuild.ExecuteWithoutRestore().Should().Pass();
 
-            File.Exists(Path.Combine(manifestProjectFolder, "missing.project.assets.json")).Should().BeFalse();
+            File.Exists(projectAssetsFile).Should().BeFalse();
 
             var manifestReferencesCommand = new GetValuesCommand(
                 Log,
@@ -1172,84 +1170,6 @@ namespace FrameworkReferenceTest
             project.AdditionalProperties["GenerateDependencyFile"] = "false";
             project.AdditionalProperties["GenerateRuntimeConfigurationFiles"] = "false";
             return project;
-        }
-
-        private static void WriteFrameworkReferenceManifest(
-            string manifestPath,
-            string targetFramework,
-            IEnumerable<(string value, Dictionary<string, string> metadata)> references,
-            IEnumerable<(string value, Dictionary<string, string> metadata)> runtimeFrameworks,
-            IEnumerable<(string value, Dictionary<string, string> metadata)> resolvedFrameworkReferences,
-            string appHostSourcePath,
-            string appHostRuntimeIdentifier)
-        {
-            XNamespace ns = "http://schemas.microsoft.com/developer/msbuild/2003";
-            var project = new XElement(ns + "Project",
-                new XElement(ns + "PropertyGroup",
-                    new XElement(ns + "_UsingFrameworkReferenceManifest", "true"),
-                    new XElement(ns + "SkipResolvePackageAssets", "true"),
-                    new XElement(ns + "DisableCheckingDuplicateNuGetItems", "true"),
-                    new XElement(ns + "UseAppHostFromAssetsFile", "false")),
-                new XElement(ns + "ItemGroup",
-                    references.Select(reference =>
-                        new XElement(ns + "_FrameworkReferenceManifestCompileReference",
-                            new XAttribute("Include", reference.value),
-                            new XElement(ns + "ReferenceAssembly", reference.metadata["ReferenceAssembly"]),
-                            new XElement(ns + "TargetFramework", targetFramework),
-                            new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"))),
-                    runtimeFrameworks.Select(runtimeFramework =>
-                        CreateManifestItem(
-                            ns,
-                            "_FrameworkReferenceManifestRuntimeFramework",
-                            runtimeFramework,
-                            ("TargetFramework", targetFramework),
-                            ("FrameworkReference", "Microsoft.NETCore.App"))),
-                    resolvedFrameworkReferences.Select(frameworkReference =>
-                        CreateManifestItem(
-                            ns,
-                            "_FrameworkReferenceManifestFrameworkReference",
-                            frameworkReference,
-                            ("TargetFramework", targetFramework))),
-                    new XElement(ns + "_FrameworkReferenceManifestAppHost",
-                        new XAttribute("Include", appHostSourcePath),
-                        new XElement(ns + "TargetFramework", targetFramework),
-                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"),
-                        new XElement(ns + "RuntimeIdentifier", appHostRuntimeIdentifier)),
-                    new XElement(ns + "_FrameworkReferenceManifestCompileReference",
-                        new XAttribute("Include", "unused-reference.dll"),
-                        new XElement(ns + "ReferenceAssembly", "unused-reference.dll"),
-                        new XElement(ns + "TargetFramework", "unsupported"),
-                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App")),
-                    new XElement(ns + "_FrameworkReferenceManifestRuntimeFramework",
-                        new XAttribute("Include", "Unused.Runtime"),
-                        new XElement(ns + "TargetFramework", "unsupported"),
-                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App")),
-                    new XElement(ns + "_FrameworkReferenceManifestFrameworkReference",
-                        new XAttribute("Include", "Unused.Framework"),
-                        new XElement(ns + "TargetFramework", "unsupported")),
-                    new XElement(ns + "_FrameworkReferenceManifestAppHost",
-                        new XAttribute("Include", "unused-apphost"),
-                        new XElement(ns + "TargetFramework", "unsupported"),
-                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"),
-                        new XElement(ns + "RuntimeIdentifier", "unsupported"))));
-
-            Directory.CreateDirectory(Path.GetDirectoryName(manifestPath));
-            new XDocument(project).Save(manifestPath);
-        }
-
-        private static XElement CreateManifestItem(
-            XNamespace ns,
-            string itemType,
-            (string value, Dictionary<string, string> metadata) item,
-            params (string name, string value)[] additionalMetadata)
-        {
-            return new XElement(
-                ns + itemType,
-                new XAttribute("Include", item.value),
-                item.metadata
-                    .Where(metadata => !string.IsNullOrEmpty(metadata.Value))
-                    .Select(metadata => new XElement(ns + metadata.Key, metadata.Value)),
-                additionalMetadata.Select(metadata => new XElement(ns + metadata.name, metadata.value)));
         }
 
         private void TestFrameworkReferenceProfiles(
