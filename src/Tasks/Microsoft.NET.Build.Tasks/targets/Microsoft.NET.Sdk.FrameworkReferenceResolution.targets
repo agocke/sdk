@@ -265,6 +265,38 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <UsingTask TaskName="ResolveFrameworkReferences" AssemblyFile="$(MicrosoftNETBuildTasksAssembly)" />
 
+  <Target Name="_ResolveFrameworkReferenceManifest"
+          BeforeTargets="ResolveFrameworkReferences;ResolveTargetingPackAssets"
+          Condition="'$(_UsingFrameworkReferenceManifest)' == 'true'">
+    <ItemGroup>
+      <ResolvedFrameworkReference Include="@(_FrameworkReferenceManifestFrameworkReference)"
+                                  Condition="'%(_FrameworkReferenceManifestFrameworkReference.TargetFramework)' == '$(TargetFramework)' and
+                                             '%(_FrameworkReferenceManifestFrameworkReference.Identity)' == '@(FrameworkReference)'"
+                                  RemoveMetadata="TargetFramework" />
+      <RuntimeFramework Include="@(_FrameworkReferenceManifestRuntimeFramework)"
+                        Condition="'%(_FrameworkReferenceManifestRuntimeFramework.TargetFramework)' == '$(TargetFramework)' and
+                                   '%(_FrameworkReferenceManifestRuntimeFramework.FrameworkReference)' == '@(FrameworkReference)'"
+                        RemoveMetadata="TargetFramework;FrameworkReference" />
+      <ReferencePath Include="@(_FrameworkReferenceManifestCompileReference)"
+                     Condition="'%(_FrameworkReferenceManifestCompileReference.TargetFramework)' == '$(TargetFramework)' and
+                                '%(_FrameworkReferenceManifestCompileReference.FrameworkReference)' == '@(FrameworkReference)'"
+                     RemoveMetadata="TargetFramework;FrameworkReference">
+        <Private>false</Private>
+        <ExternallyResolved>true</ExternallyResolved>
+        <ReferenceSourceTarget>FrameworkReferenceManifest</ReferenceSourceTarget>
+      </ReferencePath>
+      <_SelectedFrameworkReferenceManifestAppHost Include="@(_FrameworkReferenceManifestAppHost)"
+                                                  Condition="'%(_FrameworkReferenceManifestAppHost.TargetFramework)' == '$(TargetFramework)' and
+                                                             '%(_FrameworkReferenceManifestAppHost.FrameworkReference)' == '@(FrameworkReference)'"
+                                                  RemoveMetadata="TargetFramework;FrameworkReference" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'@(_SelectedFrameworkReferenceManifestAppHost)' != ''">
+      <AppHostSourcePath Condition="'$(AppHostSourcePath)' == ''">@(_SelectedFrameworkReferenceManifestAppHost)</AppHostSourcePath>
+      <AppHostRuntimeIdentifier Condition="'$(AppHostRuntimeIdentifier)' == ''">@(_SelectedFrameworkReferenceManifestAppHost->'%(RuntimeIdentifier)')</AppHostRuntimeIdentifier>
+    </PropertyGroup>
+  </Target>
+
   <!--
     ============================================================
                                         ResolveFrameworkReferences

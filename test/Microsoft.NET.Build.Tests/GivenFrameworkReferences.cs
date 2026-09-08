@@ -979,7 +979,7 @@ namespace FrameworkReferenceTest
         }
 
         [TestMethod]
-        public void FrameworkReferenceManifestCanSupplyCompileReferencesAndAppHostWithoutRestore()
+        public void FrameworkReferenceManifestCandidatesCanResolveCompileReferencesAndAppHostWithoutRestore()
         {
             var baselineProject = CreateFrameworkManifestTestProject();
             var baselineAsset = TestAssetsManager.CreateTestProject(baselineProject, identifier: "baseline");
@@ -1069,6 +1069,7 @@ namespace FrameworkReferenceTest
 
             WriteFrameworkReferenceManifest(
                 manifestPath,
+                manifestProject.TargetFrameworks,
                 baselineReferences,
                 runtimeFrameworks,
                 resolvedFrameworkReferences,
@@ -1100,6 +1101,60 @@ namespace FrameworkReferenceTest
             manifestReferences.Should().OnlyContain(
                 reference => reference.metadata["ReferenceSourceTarget"] == "FrameworkReferenceManifest");
 
+            var manifestRuntimeFrameworkCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "RuntimeFramework",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "FrameworkName", "Version", "Profile" },
+            };
+
+            manifestRuntimeFrameworkCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestRuntimeFrameworkCommand.GetValuesWithMetadata()
+                .Should().BeEquivalentTo(runtimeFrameworks, options => options.WithStrictOrdering());
+
+            var manifestResolvedFrameworkReferenceCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "ResolvedFrameworkReference",
+                GetValuesCommand.ValueType.Item)
+            {
+                DependsOnTargets = "ResolveFrameworkReferences",
+                MetadataNames = { "IsImplicitlyDefined", "TargetingPackName", "TargetingPackVersion", "TargetingPackPath", "OriginalItemSpec", "Profile" },
+            };
+
+            manifestResolvedFrameworkReferenceCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestResolvedFrameworkReferenceCommand.GetValuesWithMetadata()
+                .Should().BeEquivalentTo(resolvedFrameworkReferences, options => options.WithStrictOrdering());
+
+            var manifestAppHostSourcePathCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "AppHostSourcePath")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            manifestAppHostSourcePathCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestAppHostSourcePathCommand.GetValues().Single().Should().Be(appHostSourcePath);
+
+            var manifestAppHostRuntimeIdentifierCommand = new GetValuesCommand(
+                Log,
+                manifestProjectFolder,
+                manifestProject.TargetFrameworks,
+                "AppHostRuntimeIdentifier")
+            {
+                DependsOnTargets = "_GetAppHostPaths",
+            };
+
+            manifestAppHostRuntimeIdentifierCommand.ExecuteWithoutRestore().Should().Pass();
+            manifestAppHostRuntimeIdentifierCommand.GetValues().Single().Should().Be(appHostRuntimeIdentifier);
+
             DirectoryInfo outputDirectory = manifestBuild.GetOutputDirectory(manifestProject.TargetFrameworks);
             outputDirectory.Should().HaveFile(manifestProject.Name + ".dll");
             outputDirectory.Should().HaveFile(manifestProject.Name + EnvironmentInfo.ExecutableExtension);
@@ -1121,6 +1176,7 @@ namespace FrameworkReferenceTest
 
         private static void WriteFrameworkReferenceManifest(
             string manifestPath,
+            string targetFramework,
             IEnumerable<(string value, Dictionary<string, string> metadata)> references,
             IEnumerable<(string value, Dictionary<string, string> metadata)> runtimeFrameworks,
             IEnumerable<(string value, Dictionary<string, string> metadata)> resolvedFrameworkReferences,
@@ -1133,21 +1189,49 @@ namespace FrameworkReferenceTest
                     new XElement(ns + "_UsingFrameworkReferenceManifest", "true"),
                     new XElement(ns + "SkipResolvePackageAssets", "true"),
                     new XElement(ns + "DisableCheckingDuplicateNuGetItems", "true"),
-                    new XElement(ns + "UseAppHostFromAssetsFile", "false"),
-                    new XElement(ns + "AppHostSourcePath", appHostSourcePath),
-                    new XElement(ns + "AppHostRuntimeIdentifier", appHostRuntimeIdentifier)),
+                    new XElement(ns + "UseAppHostFromAssetsFile", "false")),
                 new XElement(ns + "ItemGroup",
                     references.Select(reference =>
-                        new XElement(ns + "ReferencePath",
+                        new XElement(ns + "_FrameworkReferenceManifestCompileReference",
                             new XAttribute("Include", reference.value),
                             new XElement(ns + "ReferenceAssembly", reference.metadata["ReferenceAssembly"]),
-                            new XElement(ns + "Private", "false"),
-                            new XElement(ns + "ExternallyResolved", "true"),
-                            new XElement(ns + "ReferenceSourceTarget", "FrameworkReferenceManifest"))),
+                            new XElement(ns + "TargetFramework", targetFramework),
+                            new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"))),
                     runtimeFrameworks.Select(runtimeFramework =>
-                        CreateManifestItem(ns, "RuntimeFramework", runtimeFramework)),
+                        CreateManifestItem(
+                            ns,
+                            "_FrameworkReferenceManifestRuntimeFramework",
+                            runtimeFramework,
+                            ("TargetFramework", targetFramework),
+                            ("FrameworkReference", "Microsoft.NETCore.App"))),
                     resolvedFrameworkReferences.Select(frameworkReference =>
-                        CreateManifestItem(ns, "ResolvedFrameworkReference", frameworkReference))));
+                        CreateManifestItem(
+                            ns,
+                            "_FrameworkReferenceManifestFrameworkReference",
+                            frameworkReference,
+                            ("TargetFramework", targetFramework))),
+                    new XElement(ns + "_FrameworkReferenceManifestAppHost",
+                        new XAttribute("Include", appHostSourcePath),
+                        new XElement(ns + "TargetFramework", targetFramework),
+                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"),
+                        new XElement(ns + "RuntimeIdentifier", appHostRuntimeIdentifier)),
+                    new XElement(ns + "_FrameworkReferenceManifestCompileReference",
+                        new XAttribute("Include", "unused-reference.dll"),
+                        new XElement(ns + "ReferenceAssembly", "unused-reference.dll"),
+                        new XElement(ns + "TargetFramework", "unsupported"),
+                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App")),
+                    new XElement(ns + "_FrameworkReferenceManifestRuntimeFramework",
+                        new XAttribute("Include", "Unused.Runtime"),
+                        new XElement(ns + "TargetFramework", "unsupported"),
+                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App")),
+                    new XElement(ns + "_FrameworkReferenceManifestFrameworkReference",
+                        new XAttribute("Include", "Unused.Framework"),
+                        new XElement(ns + "TargetFramework", "unsupported")),
+                    new XElement(ns + "_FrameworkReferenceManifestAppHost",
+                        new XAttribute("Include", "unused-apphost"),
+                        new XElement(ns + "TargetFramework", "unsupported"),
+                        new XElement(ns + "FrameworkReference", "Microsoft.NETCore.App"),
+                        new XElement(ns + "RuntimeIdentifier", "unsupported"))));
 
             Directory.CreateDirectory(Path.GetDirectoryName(manifestPath));
             new XDocument(project).Save(manifestPath);
@@ -1156,14 +1240,16 @@ namespace FrameworkReferenceTest
         private static XElement CreateManifestItem(
             XNamespace ns,
             string itemType,
-            (string value, Dictionary<string, string> metadata) item)
+            (string value, Dictionary<string, string> metadata) item,
+            params (string name, string value)[] additionalMetadata)
         {
             return new XElement(
                 ns + itemType,
                 new XAttribute("Include", item.value),
                 item.metadata
                     .Where(metadata => !string.IsNullOrEmpty(metadata.Value))
-                    .Select(metadata => new XElement(ns + metadata.Key, metadata.Value)));
+                    .Select(metadata => new XElement(ns + metadata.Key, metadata.Value)),
+                additionalMetadata.Select(metadata => new XElement(ns + metadata.name, metadata.value)));
         }
 
         private void TestFrameworkReferenceProfiles(
