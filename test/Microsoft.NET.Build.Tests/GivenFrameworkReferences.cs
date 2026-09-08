@@ -1064,11 +1064,7 @@ namespace FrameworkReferenceTest
             string manifestProjectFolder = Path.Combine(manifestAsset.TestRoot, manifestProject.Name);
             new RestoreCommand(manifestAsset).Execute().Should().Pass();
 
-            string manifestPath = Path.Combine(
-                manifestProjectFolder,
-                "obj",
-                "frameworkreferences",
-                $"{manifestProject.Name}.csproj.g.props");
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(manifestProjectFolder, manifestProject.Name);
             File.Exists(manifestPath).Should().BeTrue();
 
             string projectAssetsFile = Path.Combine(manifestProjectFolder, "obj", "project.assets.json");
@@ -1158,6 +1154,109 @@ namespace FrameworkReferenceTest
             outputDirectory.Should().HaveFile(manifestProject.Name + EnvironmentInfo.ExecutableExtension);
         }
 
+        [TestMethod]
+        [DataRow("FrameworkReference", "Microsoft.AspNetCore.App")]
+        [DataRow("FrameworkReference", "Microsoft.NETCore.App")]
+        [DataRow("PackageReference", "Unsupported.Package")]
+        [DataRow("ProjectReference", "missing-project.csproj")]
+        [DataRow("Reference", "Unsupported.Assembly")]
+        [DataRow("RuntimeIdentifier", "unsupported-rid")]
+        [DataRow("RuntimeIdentifiers", "unsupported-rid-1;unsupported-rid-2")]
+        [DataRow("TargetFrameworks", "multiple")]
+        public void FrameworkReferenceFetchManifestRejectsUnsupportedInputsAndRemovesStaleManifest(
+            string inputName,
+            string inputValue)
+        {
+            if (inputName == "TargetFrameworks")
+            {
+                inputValue = $"net10.0;{ToolsetInfo.CurrentTargetFramework}";
+            }
+
+            var project = CreateFrameworkManifestTestProject();
+            project.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
+
+            var testAsset = TestAssetsManager.CreateTestProject(project, identifier: inputName);
+            string projectFolder = Path.Combine(testAsset.TestRoot, project.Name);
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new RestoreCommand(testAsset).Execute().Should().Pass();
+            File.Exists(manifestPath).Should().BeTrue();
+
+            AddUnsupportedFrameworkReferenceFetchManifestInput(
+                Path.Combine(projectFolder, $"{project.Name}.csproj"),
+                inputName,
+                inputValue);
+
+            new BuildCommand(testAsset)
+                .ExecuteWithoutRestore()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("NETSDK1245")
+                .And
+                .HaveStdOutContaining($"MSBuild input '{inputName}'")
+                .And
+                .HaveStdOutContaining(inputValue);
+
+            File.Exists(manifestPath).Should().BeTrue();
+
+            new RestoreCommand(testAsset)
+                .Execute()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("NETSDK1245")
+                .And
+                .HaveStdOutContaining($"MSBuild input '{inputName}'")
+                .And
+                .HaveStdOutContaining(inputValue);
+
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+
+        [TestMethod]
+        public void FrameworkReferenceFetchManifestReportsAllUnsupportedInputsBeforeStopping()
+        {
+            var project = CreateFrameworkManifestTestProject();
+            project.AdditionalProperties["EnableFrameworkReferenceFetchManifest"] = "true";
+
+            var testAsset = TestAssetsManager.CreateTestProject(project, identifier: "all-unsupported-inputs");
+            string projectFolder = Path.Combine(testAsset.TestRoot, project.Name);
+            string projectPath = Path.Combine(projectFolder, $"{project.Name}.csproj");
+            string manifestPath = GetFrameworkReferenceFetchManifestPath(projectFolder, project.Name);
+
+            new RestoreCommand(testAsset).Execute().Should().Pass();
+            File.Exists(manifestPath).Should().BeTrue();
+
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "FrameworkReference", "Microsoft.AspNetCore.App");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "PackageReference", "Unsupported.Package");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "ProjectReference", "missing-project.csproj");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "Reference", "Unsupported.Assembly");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "RuntimeIdentifier", "unsupported-rid");
+            AddUnsupportedFrameworkReferenceFetchManifestInput(projectPath, "RuntimeIdentifiers", "unsupported-rid-1;unsupported-rid-2");
+
+            new RestoreCommand(testAsset)
+                .Execute()
+                .Should()
+                .Fail()
+                .And
+                .HaveStdOutContaining("Microsoft.AspNetCore.App")
+                .And
+                .HaveStdOutContaining("Unsupported.Package")
+                .And
+                .HaveStdOutContaining("missing-project.csproj")
+                .And
+                .HaveStdOutContaining("Unsupported.Assembly")
+                .And
+                .HaveStdOutContaining("unsupported-rid")
+                .And
+                .HaveStdOutContaining("unsupported-rid-1;unsupported-rid-2")
+                .And
+                .HaveStdOutContaining("NETSDK1246");
+
+            File.Exists(manifestPath).Should().BeFalse();
+        }
+
         private static TestProject CreateFrameworkManifestTestProject()
         {
             var project = new TestProject
@@ -1170,6 +1269,44 @@ namespace FrameworkReferenceTest
             project.AdditionalProperties["GenerateDependencyFile"] = "false";
             project.AdditionalProperties["GenerateRuntimeConfigurationFiles"] = "false";
             return project;
+        }
+
+        private static string GetFrameworkReferenceFetchManifestPath(string projectFolder, string projectName)
+            => Path.Combine(projectFolder, "obj", "frameworkreferences", $"{projectName}.csproj.g.props");
+
+        private static void AddUnsupportedFrameworkReferenceFetchManifestInput(
+            string projectPath,
+            string inputName,
+            string inputValue)
+        {
+            XDocument project = XDocument.Load(projectPath);
+            XNamespace ns = project.Root.Name.Namespace;
+
+            if (inputName is "RuntimeIdentifier" or "RuntimeIdentifiers")
+            {
+                project.Root.Element(ns + "PropertyGroup").Add(new XElement(ns + inputName, inputValue));
+            }
+            else if (inputName == "TargetFrameworks")
+            {
+                XElement targetFramework = project.Root.Descendants(ns + "TargetFramework").Single();
+                targetFramework.Name = ns + "TargetFrameworks";
+                targetFramework.Value = inputValue;
+            }
+            else
+            {
+                if (inputName == "FrameworkReference" && inputValue == "Microsoft.NETCore.App")
+                {
+                    project.Root.Element(ns + "PropertyGroup").Add(
+                        new XElement(ns + "DisableImplicitFrameworkReferences", "true"));
+                }
+
+                project.Root.Add(
+                    new XElement(
+                        ns + "ItemGroup",
+                        new XElement(ns + inputName, new XAttribute("Include", inputValue))));
+            }
+
+            project.Save(projectPath);
         }
 
         private void TestFrameworkReferenceProfiles(

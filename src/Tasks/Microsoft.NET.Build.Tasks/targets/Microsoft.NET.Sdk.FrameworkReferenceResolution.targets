@@ -36,11 +36,7 @@ Copyright (c) .NET Foundation. All rights reserved.
           DependsOnTargets="_CollectFrameworkReferenceFetchManifestRuntimeFrameworks;ResolveTargetingPackAssets;_GetAppHostPaths"
           Condition="'$(EnableFrameworkReferenceFetchManifest)' == 'true' and
                      '$(MSBuildIsRestoring)' == 'true' and
-                     '$(IsCrossTargetingBuild)' != 'true' and
-                     '@(FrameworkReference->Count())' == '1' and
-                     '@(PackageReference->Count())' == '0' and
-                     '@(ProjectReference->Count())' == '0' and
-                     '$(RuntimeIdentifier)' == ''">
+                     '$(_FrameworkReferenceFetchManifestProfileSupported)' == 'true'">
     <WriteFrameworkReferenceFetchManifest
       OutputFile="$(FrameworkReferenceFetchManifestPath)"
       TargetFramework="$(TargetFramework)"
