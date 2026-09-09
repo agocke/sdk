@@ -196,10 +196,25 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Compile Remove="$(GeneratedAssemblyInfoFile)" />
     </ItemGroup>
 
-    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)" Language="$(Language)" OutputFile="$(GeneratedAssemblyInfoFile)">
+    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)"
+                       Language="$(Language)"
+                       OutputFile="$(GeneratedAssemblyInfoFile)"
+                       Condition="'$(MSBuildHardenedGraph)' != 'true'">
       <Output TaskParameter="OutputFile" ItemName="Compile" />
       <Output TaskParameter="OutputFile" ItemName="FileWrites" />
     </WriteCodeFragment>
+
+    <WriteCodeFragment AssemblyAttributes="@(AssemblyAttribute)"
+                       Language="$(Language)"
+                       OutputFile="$(GeneratedAssemblyInfoFile)"
+                       DeclaredInputs=""
+                       DeclaredOutputs="$(GeneratedAssemblyInfoFile)"
+                       Condition="'$(MSBuildHardenedGraph)' == 'true'" />
+
+    <ItemGroup Condition="'$(MSBuildHardenedGraph)' == 'true'">
+      <Compile Include="$(GeneratedAssemblyInfoFile)" />
+      <FileWrites Include="$(GeneratedAssemblyInfoFile)" />
+    </ItemGroup>
   </Target>
 
 
