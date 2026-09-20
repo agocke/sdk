@@ -371,8 +371,18 @@ Copyright (c) .NET Foundation. All rights reserved.
     </Hash>
 
     <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
       Lines="$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)"
       File="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
+
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      Lines="$(_GenerateRuntimeConfigurationPropertyInputsCacheHash)"
+      File="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      DeclaredInputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
+      DeclaredOutputs="$(_GenerateRuntimeConfigurationPropertyInputsCache)"
       Overwrite="True"
       WriteOnlyWhenDifferent="True" />
 

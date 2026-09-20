@@ -179,7 +179,21 @@ Copyright (c) .NET Foundation. All rights reserved.
       <Output TaskParameter="HashResult" PropertyName="_AssemblyAttributesHash" />
     </Hash>
 
-    <WriteLinesToFile Lines="$(_AssemblyAttributesHash)" File="$(GeneratedAssemblyInfoInputsCacheFile)" Overwrite="True" WriteOnlyWhenDifferent="True" />
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' != 'true'"
+      Lines="$(_AssemblyAttributesHash)"
+      File="$(GeneratedAssemblyInfoInputsCacheFile)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
+
+    <WriteLinesToFile
+      Condition="'$(MSBuildHardenedGraph)' == 'true'"
+      Lines="$(_AssemblyAttributesHash)"
+      File="$(GeneratedAssemblyInfoInputsCacheFile)"
+      DeclaredInputs="$(GeneratedAssemblyInfoInputsCacheFile)"
+      DeclaredOutputs="$(GeneratedAssemblyInfoInputsCacheFile)"
+      Overwrite="True"
+      WriteOnlyWhenDifferent="True" />
 
     <ItemGroup>
       <FileWrites Include="$(GeneratedAssemblyInfoInputsCacheFile)" />
